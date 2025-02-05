@@ -120,7 +120,7 @@
             container: 'map', 
             style: 'mapbox://styles/mapbox/light-v10', 
             zoom: 11, 
-            center: [-122.335167, 47.608013] // Seattle's coordinates
+            center: [-122.335167, 47.608013] 
         });
 
         
@@ -134,7 +134,7 @@
             bridgesSeattle = await response.json();
 
             map.on('load', function () {
-                // Add Seattle Census Boundaries Layer
+                
                 map.addSource('seattle-census', {
                     type: 'geojson',
                     data: seattleCensus
@@ -151,7 +151,7 @@
                     }
                 });
 
-                // Add Bridges Layer
+            
                 map.addSource('bridges', {
                     type: 'geojson',
                     data: bridgesSeattle
