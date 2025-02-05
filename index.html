@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seattle Bridges & Census Map</title>
+    
+    <!-- Mapbox -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+
+        #side-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 350px;
+            max-height: 90vh;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            overflow-y: auto;
+            z-index: 1000;
+            border-radius: 8px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        @media (max-width: 1024px) {
+            #side-panel {
+                display: none;
+            }
+            #toggle-sidebar {
+                display: block;
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                background: #007BFF;
+                color: white;
+                padding: 8px;
+                border: none;
+                cursor: pointer;
+                z-index: 1001;
+                border-radius: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <button id="toggle-sidebar" style="display:none;">Show Sidebar</button>
+
+    <div id="side-panel">
+        <h2>Seattle Bridges</h2>
+        <button id="sort-btn">Sort by Rating</button>
+        <table id="bridge-table">
+            <tr>
+                <th>Name</th>
+                <th>Features</th>
+                <th>Rating</th>
+            </tr>
+        </table>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+    
+        mapboxgl.accessToken = 'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
+
+        
+        let map = new mapboxgl.Map({
+            container: 'map', 
+            style: 'mapbox://styles/mapbox/light-v10', 
+            zoom: 11, 
+            center: [-122.335167, 47.608013] // Seattle's coordinates
+        });
+
+        
+        async function geojsonFetch() {
+            let response, seattleCensus, bridgesSeattle;
+
+            response = await fetch('assets/seattle_census.geojson');
+            seattleCensus = await response.json();
+
+            response = await fetch('assets/bridge_seattle.geojson');
+            bridgesSeattle = await response.json();
+
+            map.on('load', function () {
+                // Add Seattle Census Boundaries Layer
+                map.addSource('seattle-census', {
+                    type: 'geojson',
+                    data: seattleCensus
+                });
+
+                map.addLayer({
+                    'id': 'seattle-census-layer',
+                    'type': 'fill',
+                    'source': 'seattle-census',
+                    'paint': {
+                        'fill-color': '#008080', 
+                        'fill-opacity': 0.4,
+                        'fill-outline-color': '#005f5f'
+                    }
+                });
+
+                // Add Bridges Layer
+                map.addSource('bridges', {
+                    type: 'geojson',
+                    data: bridgesSeattle
+                });
+
+                map.addLayer({
+                    'id': 'bridges-layer',
+                    'type': 'line',
+                    'source': 'bridges',
+                    'paint': {
+                        'line-color': 'red',
+                        'line-width': 3
+                    }
+                });
+
+                
+                populateTable(bridgesSeattle);
+            });
+        }
+
+        geojsonFetch();
+
+        function populateTable(bridgesSeattle) {
+            let table = document.getElementById("bridge-table");
+
+            bridgesSeattle.features.forEach(bridge => {
+                let row = table.insertRow(-1);
+                row.insertCell(0).innerText = bridge.properties.BR_NAME;
+                row.insertCell(1).innerText = bridge.properties.BR_FEATURES;
+                row.insertCell(2).innerText = bridge.properties.BR_RATING;
+            });
+        }
+
+        document.getElementById("sort-btn").addEventListener("click", function() {
+            let table = document.getElementById("bridge-table");
+            let rows = Array.from(table.rows).slice(1); // Ignore header row
+
+            rows.sort((a, b) => {
+                let ratingA = parseFloat(a.cells[2].innerText);
+                let ratingB = parseFloat(b.cells[2].innerText);
+                return ratingB - ratingA; // Descending order
+            });
+
+            rows.forEach(row => table.appendChild(row));
+        });
+
+        document.getElementById("toggle-sidebar").addEventListener("click", function() {
+            let sidebar = document.getElementById("side-panel");
+            if (sidebar.style.display === "none" || sidebar.style.display === "") {
+                sidebar.style.display = "block";
+                this.innerText = "Hide Sidebar";
+            } else {
+                sidebar.style.display = "none";
+                this.innerText = "Show Sidebar";
+            }
+        });
+    </script>
+
+</body>
+</html>
